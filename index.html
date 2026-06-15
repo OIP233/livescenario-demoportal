@@ -274,6 +274,10 @@ h2.sec{
 .launch.play:hover{filter:brightness(1.12);transform:translateY(-2px);}
 .launch.play .ls{opacity:.8;}
 .launch.off{pointer-events:none;opacity:.35;filter:saturate(.4);}
+.launch.inactive{pointer-events:none;cursor:not-allowed;opacity:.4;filter:saturate(.25);
+  background:transparent;color:var(--vc,var(--accent));border:1px dashed var(--vc,var(--accent));box-shadow:none;}
+.launch.inactive .lt::after{content:'—';transform:none;}
+.launch.inactive .ls{opacity:.85;font-style:italic;}
 
 /* ---------- footer ---------- */
 footer{border-top:1px solid var(--border);padding:38px 0 46px;position:relative;z-index:1;}
@@ -591,6 +595,7 @@ nl: {
     btnCtrl: "Controller", btnCtrlSub: "trainer · scenario bouwen", btnPlay: "Player", btnPlaySub: "deelnemer · de training",
     btnCtrl2: "Controller", btnCtrlSub2: "trainer · scenario bouwen", btnPlay2: "Player", btnPlaySub2: "deelnemer · de training",
     btnCtrl3: "Controller", btnCtrlSub3: "trainer · scenario bouwen", btnPlay3: "Player", btnPlaySub3: "deelnemer · de training",
+    inactiveLabel: "niet beschikbaar in deze demo",
     footTag: "AI-gedreven scenariotraining · demo-portaal",
     cfgTitle: "Beheer &amp; deellink", cfgUrls: "App-adressen (URL's)", cfgAccess: "Toegang voor deze deellink",
     cfgVis: "Zichtbare startknoppen",
@@ -652,6 +657,7 @@ en: {
     btnCtrl: "Controller", btnCtrlSub: "trainer · build scenarios", btnPlay: "Player", btnPlaySub: "trainee · the training",
     btnCtrl2: "Controller", btnCtrlSub2: "trainer · build scenarios", btnPlay2: "Player", btnPlaySub2: "trainee · the training",
     btnCtrl3: "Controller", btnCtrlSub3: "trainer · build scenarios", btnPlay3: "Player", btnPlaySub3: "trainee · the training",
+    inactiveLabel: "not available in this demo",
     footTag: "AI-driven scenario training · demo portal",
     cfgTitle: "Admin &amp; share link", cfgUrls: "App addresses (URLs)", cfgAccess: "Access for this share link",
     cfgVis: "Visible launch buttons",
@@ -713,6 +719,7 @@ de: {
     btnCtrl: "Controller", btnCtrlSub: "Trainer · Szenario bauen", btnPlay: "Player", btnPlaySub: "Teilnehmer · das Training",
     btnCtrl2: "Controller", btnCtrlSub2: "Trainer · Szenario bauen", btnPlay2: "Player", btnPlaySub2: "Teilnehmer · das Training",
     btnCtrl3: "Controller", btnCtrlSub3: "Trainer · Szenario bauen", btnPlay3: "Player", btnPlaySub3: "Teilnehmer · das Training",
+    inactiveLabel: "in dieser Demo nicht verfügbar",
     footTag: "KI-gestütztes Szenariotraining · Demo-Portal",
     cfgTitle: "Verwaltung &amp; Freigabelink", cfgUrls: "App-Adressen (URLs)", cfgAccess: "Zugang für diesen Freigabelink",
     cfgVis: "Sichtbare Start-Buttons",
@@ -774,6 +781,7 @@ es: {
     btnCtrl: "Controller", btnCtrlSub: "formador · crear escenarios", btnPlay: "Player", btnPlaySub: "participante · el entrenamiento",
     btnCtrl2: "Controller", btnCtrlSub2: "formador · crear escenarios", btnPlay2: "Player", btnPlaySub2: "participante · el entrenamiento",
     btnCtrl3: "Controller", btnCtrlSub3: "formador · crear escenarios", btnPlay3: "Player", btnPlaySub3: "participante · el entrenamiento",
+    inactiveLabel: "no disponible en esta demo",
     footTag: "Entrenamiento por escenarios con IA · portal de demostración",
     cfgTitle: "Administración &amp; enlace para compartir", cfgUrls: "Direcciones de las apps (URLs)", cfgAccess: "Acceso para este enlace",
     cfgVis: "Botones de inicio visibles",
@@ -874,26 +882,37 @@ var LINKS = { cc:'ln-cc', cp:'ln-cp', fc:'ln-fc', fp:'ln-fp', tc:'ln-tc', tp:'ln
 var CARDS = { cro:['cc','cp'], field:['fc','fp'], tech:['tc','tp'] };
 function applyLinks(){
   var off = isExpired();
+  var inactLabel = (DICT[LANG] && DICT[LANG].s && DICT[LANG].s.inactiveLabel) || 'niet beschikbaar';
   Object.keys(LINKS).forEach(function(k){
     var a = document.getElementById(LINKS[k]);
-    a.setAttribute('href', CFG.u[k]);
+    var active = !!CFG.v[k];
+    a.style.display = '';                 // alle knoppen blijven zichtbaar
     a.classList.toggle('off', off);
-    a.style.display = CFG.v[k] ? '' : 'none';
+    a.classList.toggle('inactive', !active);
+    var ls = a.querySelector('.ls');
+    if(active){
+      a.setAttribute('href', CFG.u[k]);
+      if(ls){                              // herstel het normale subtitel-label
+        var key = ls.getAttribute('data-i18n');
+        var orig = (key && DICT[LANG] && DICT[LANG].s) ? DICT[LANG].s[key] : null;
+        if(orig != null) ls.innerHTML = orig;
+      }
+    } else {
+      a.removeAttribute('href');           // niet klikbaar
+      if(ls) ls.innerHTML = inactLabel;
+    }
   });
-  var visVariants = 0;
+  // Alle drie de varianten blijven altijd zichtbaar
   Object.keys(CARDS).forEach(function(c){
-    var keys = CARDS[c];
-    var n = keys.filter(function(k){ return CFG.v[k]; }).length;
     var card = document.getElementById('card-' + c);
-    card.style.display = n ? '' : 'none';
-    if(n) visVariants++;
+    card.style.display = '';
     var row = card.querySelector('.launchrow');
-    row.style.gridTemplateColumns = (n === 1) ? '1fr' : '';
+    row.style.gridTemplateColumns = '';
   });
   var kpi1 = document.querySelector('[data-count]');
   if(kpi1){
-    kpi1.setAttribute('data-count', visVariants);
-    if(kpiDone) kpi1.textContent = visVariants;
+    kpi1.setAttribute('data-count', 3);
+    if(kpiDone) kpi1.textContent = 3;
   }
   var m = document.getElementById('methodLink');
   if(CFG.u.m){ m.style.display=''; m.setAttribute('href', CFG.u.m); } else { m.style.display='none'; }
@@ -965,6 +984,7 @@ function applyLang(l){
   renderHero();
   renderKnow();
   renderBanner();
+  applyLinks();
 }
 document.querySelectorAll('.langsel button').forEach(function(b){
   b.addEventListener('click', function(){ applyLang(b.getAttribute('data-l')); });
